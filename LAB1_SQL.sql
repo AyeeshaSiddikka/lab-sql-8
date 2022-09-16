@@ -1,4 +1,5 @@
 
+/*lab-intro-sql */
 
 -- 1.Use sakila database.
 USE sakila;
@@ -42,11 +43,11 @@ FROM staff;
 
 SELECT staff_id,
 FROM staff
-    where in first_name ;
+where in first_name ;
 
    
     
-/*Lab | SQL Queries - Lesson 2.5 */
+/*Lab | SQL Queries - Lesson 2.5 (dataV3_lesson_2.5_lab) */
 
 use sakila;
 -- 1.Select all the actors with the first name ‘Scarlett’.
@@ -116,7 +117,9 @@ LIMIT 10;
 
  select film_id,special_features from film where special_features like '%Behind the scenes%';
  
- /*Lab | SQL Queries - Lesson 2.6*/
+ /*Lab | SQL Queries - Lesson 2.6 (dataV3_Lesson_2.6_lab)*/
+ 
+ 
  -- 1.In the table actor, which are the actors whose last names are not repeated?
   -- For example if you would sort the data in the table actor by last_name,
  -- you would see that there is Christian Arkoyd, Kirsten Arkoyd, and Debbie Arkoyd. 
@@ -177,19 +180,159 @@ WHERE length <> ' ' OR length <> '0';
  
  
  
+ SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));
  
+ /* Lab | SQL Join (Part I)(dataV3_Lesson_2.7_lab) */
  
- /*Lab | SQL Join (Part I)*/
- use sakila;
- -- 1.How many films are there for each of the categories in the category table. Use appropriate join to write this query.
- 
- -- 2.Display the total amount rung up by each staff member in August of 2005.
-select first_name, last_name, sum(p.amount) as total_amount
-from payment p
-join staff s
-where p.staff_id = s.staff_id and year(payment_date) = 2005 and month(payment_date) = 8
-group by first_name;
+USE sakila;
+-- 1. How many films are there for each of the categories in the category table. Use appropriate join to write this query.
+SELECT * FROM category;
+SELECT * FROM film_category;
+SELECT count(film_id) AS 'Films', name AS 'Category'
+FROM sakila.category a
+JOIN sakila.film_category b
+ON a.category_id = b.category_id
+GROUP BY name;
 
-    
+-- 2. Display the total amount rung up (payment) by each staff member in August of 2005.
+SELECT * FROM sakila.rental;
+SELECT * FROM sakila.staff;
+SELECT * FROM sakila.payment;
+SELECT SUM(amount) AS 'August 2005', first_name AS 'First Name', last_name AS 'Last Name'
+FROM sakila.payment a
+JOIN sakila.staff b
+ON a.staff_id = b.staff_id
+WHERE payment_date > '2005-08-01 00:00:01' AND payment_date < '2005-08-30 23:59:59'
+GROUP BY first_name;
+SELECT SUM(amount) AS 'August 2005', first_name AS 'First Name', last_name AS 'Last Name'
+FROM sakila.payment a
+JOIN sakila.staff b
+ON a.staff_id = b.staff_id
+WHERE payment_date > '2005-08-01 00:00:01' AND payment_date < '2005-08-30 23:59:59'
+GROUP BY first_name;
+
+-- 3. Which actor has appeared in the most films?
+SELECT * FROM sakila.film_actor;
+SELECT * FROM sakila.actor;
+SELECT count(film_id) AS 'Film appearances', last_name, first_name
+FROM sakila.actor a
+JOIN sakila.film_actor b
+ON a.actor_id = b.actor_id
+GROUP BY a.actor_id
+ORDER BY count(film_id) DESC;
+
+-- 4. Most active customer (the customer that has rented the most number of films)
+SELECT count(rental_id) AS 'Films rented', first_name, last_name
+FROM sakila.customer c
+JOIN sakila.rental r
+ON c.customer_id = r.customer_id
+GROUP BY c.customer_id
+ORDER BY count(rental_id) DESC;
+
+-- 5. Display the first and last names, as well as the address, of each staff member.
+SELECT * FROM sakila.staff;
+SELECT first_name AS 'First Name', last_name AS 'Last Name', address AS 'Address1', address2 AS 'Address2', district AS 'District', city_id AS 'City'
+FROM sakila.staff s
+JOIN sakila.address a
+ON s.address_id = a.address_id;
+
+-- 6. List each film and the number of actors who are listed for that film.
+SELECT * FROM sakila.film;
+SELECT * FROM sakila.film_actor;
+SELECT title AS 'Title', count(actor_id) AS 'Number of actors'
+FROM sakila.film f
+JOIN sakila.film_actor fa USING (film_id)
+GROUP BY title;
+
+-- 7. Using the tables payment and customer and the JOIN command, list the total paid by each customer. List the customers alphabetically by last name.
+SELECT * FROM sakila.customer;
+SELECT * FROM sakila.payment;
+SELECT last_name AS 'Last name', first_name AS 'First name', sum(amount) AS 'Total amount paid'
+FROM sakila.customer c
+JOIN sakila.payment p USING (customer_id)
+GROUP BY last_name
+ORDER BY last_name ASC;
+
+-- 8. List number of films per category. (identical to first question, ignore)
+
+
+
+
+/*Lab | SQL Join (Part II)(lab-sql-8)*/
+use sakila;
+-- 1. Write a query to display for each store its store ID, city, and country.
+select s.store_id, c.city, ct.country
+from store s
+join address using(address_id)
+join city c using (city_id)
+join country ct using (country_id);
+-- 2. Write a query to display how much business, in dollars, each store brought in.
+select s.store_id, sum(p.amount) as business_value
+from payment p
+join rental r using (rental_id)
+join staff s
+where s.staff_id = p.staff_id
+group by s.store_id;
+-- 3. Which film categories are longest?
+select c.name, avg(f.length)
+from film f
+join film_category fc using (film_id)
+join category c using (category_id)
+group by c.name
+order by avg(length) desc;
+-- 4. Display the most frequently rented movies in descending order.
+select title
+from rental
+join inventory using (inventory_id)
+join film using (film_id)
+group by title
+order by count(rental_id) desc;
+-- 5. List the top five genres in gross revenue in descending order.
+select c.name as genre, sum(p.amount) as 'gross revenue'
+from category c
+join film_category f using (category_id)
+join inventory i using (film_id)
+join rental r using (inventory_id)
+join payment p using (rental_id)
+group by f.category_id
+order by sum(p.amount) desc
+Limit 5;
+-- 6. Is "Academy Dinosaur" available for rent from Store 1?
+select
+case
+when count(i.film_id)>0 then 'Available'
+else 'Unavailabe'
+end as 'Store availability', count(i.film_id) as 'Quantity'
+from film f
+join inventory i using(film_id)
+join store s using (store_id)
+where f.title = "Academy Dinosaur" and s.store_id=1
+group by i.film_id;
+-- 7. Get all pairs of actors that worked together.
+SELECT a1.actor_id as 'Actor 1' , a2.actor_id as 'Actor 2'
+FROM film_actor a1
+JOIN film_actor a2
+ON (a1.film_id = a2.film_id) AND (a1.actor_id <> a2.actor_id);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
